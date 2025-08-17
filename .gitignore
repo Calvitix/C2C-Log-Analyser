@@ -205,3 +205,72 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+## Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## Build results
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+## NuGet
+*.nupkg
+*.snupkg
+# Packages dossier peut être recréé par "nuget restore"
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+*.nuspec
+
+## Visual Studio Code
+.vscode/
+
+## Windows
+Thumbs.db
+ehthumbs.db
+[Dd]esktop.ini
+$RECYCLE.BIN/
+
+## JetBrains Rider
+.idea/
+*.sln.iml
+
+## Autres fichiers temporaires
+*.tmp
+*.temp
+*.bak
+*.swp
+*.obj
+*.pdb
+*.cache
+*.ilk
+
+## Test results
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+*.trx
+*.coverage
+*.coveragexml
+
+## Publish output
+[Pp]ublish/
+app.publish/
+
+## Entity Framework
+*.mdf
+*.ldf
+
+## Resharper
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+
+## Azure
+*.azurePubxml
+*.pubxml
+*.publishproj
