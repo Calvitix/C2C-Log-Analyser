@@ -21,6 +21,20 @@
             "name": ".NET Core Attach",
             "type": "coreclr",
             "request": "attach"
+        },
+        {
+        "name": "Python: Streamlit Debug",
+        "type": "debugpy",
+        "request": "launch",
+        "module": "streamlit",
+        "args": [
+            "run",
+            "${workspaceFolder}\\civ4-c2c-analyzer\\src\\app.py"
+        ],
+        "console": "integratedTerminal",
+        "env": {
+            "PYTHONPATH": "${workspaceFolder}"
+        }
         }
     ]
 }

@@ -223,6 +223,8 @@ namespace C2CLogProcessor.Parsers.Patterns
                     if (gameState.Cities.TryGetValue(_currentCityName, out var prevCity))
                     {
                         prevCity.History.Add(_currentTurnData);
+                        // Update the city's Population property
+                        prevCity.Population = _currentTurnData.Population;
                     }
                 }
 
@@ -280,6 +282,7 @@ namespace C2CLogProcessor.Parsers.Patterns
                     if (gameState.Cities.TryGetValue(_currentCityName, out var city))
                     {
                         city.History.Add(_currentTurnData);
+                        city.Population = _currentTurnData.Population;
                     }
                     _currentCityName = null;
                     _currentTurnData = null;
