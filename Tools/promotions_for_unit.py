@@ -8,6 +8,8 @@ from collections import defaultdict, deque
 
 XML_FOLDER = r"E:\C2CModding\Caveman2Cosmos\Assets\XML\Units"
 OUTPUT_FOLDER = r"E:\C2CModding\C2C-Log-Analyser\C2C-Log-Analyser\Tools\unit_chains_files"
+VECTOR_FORMATS = ["svg", "pdf"]       # formats vectoriels souhaités
+
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
 NS = {'ns': 'x-schema:../Schema/C2C_CIV4UnitSchema.xml'}
@@ -117,8 +119,8 @@ print(f"{ensemble_count} graphes DOT générés pour les chaînes d’unités.")
 import os
 import subprocess
 
-DOT_FOLDER = r"E:\C2CModding\C2C-Log-Analyser\C2C-Log-Analyser\Tools\unit_chains_files"  # dossier contenant tous les .dot
-VECTOR_FORMATS = ["svg", "pdf"]       # formats vectoriels souhaités
+DOT_FOLDER = OUTPUT_FOLDER  # dossier contenant tous les .dot
+
 
 for dot_file in os.listdir(DOT_FOLDER):
     if dot_file.endswith(".dot"):
