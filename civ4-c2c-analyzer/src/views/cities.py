@@ -41,10 +41,17 @@ def display_city_analysis(cities_data, turn_range, selected_player_id=None):
     # Passe la ville sélectionnée à chaque vue
     display_city_overview(filtered_cities, None)
 
-    # Sélection unique de la ville
+    # Sélection unique de la ville, avec option "All"
     city_names = [city["name"] for city in filtered_cities]
-    selected_city = st.selectbox("Select a city", city_names)
+    city_names_with_all = ["All"] + city_names
+    selected_city = st.selectbox("Select a city", city_names_with_all)
 
+    if selected_city == "All":
+        # Vue production pour toutes les villes (somme)
+        display_city_history(filtered_cities, turn_range, None)
+        display_city_production(filtered_cities, turn_range, "All")
+        display_city_orders(filtered_cities, turn_range, None)
+    else:
     display_city_history(filtered_cities, turn_range, selected_city)
     display_city_production(filtered_cities, turn_range, selected_city)
     display_city_orders(filtered_cities, turn_range, selected_city)
@@ -169,6 +176,19 @@ def display_city_history(cities_data, turn_range, selected_city):
 
 
 def display_city_production(cities_data, turn_range, selected_city):
+    if selected_city == "All":
+        # Agréger la production de toutes les villes
+        all_prod = []
+        for city in cities_data:
+            if city.get("produced"):
+                all_prod.extend(city["produced"])
+        prod_df = pd.DataFrame(all_prod)
+        prod_df = prod_df[
+            (prod_df["turn"] >= turn_range[0]) &
+            (prod_df["turn"] <= turn_range[1])
+        ]
+        st.subheader("All Cities - Production History")
+    else:
     city_info = next((c for c in cities_data if c["name"] == selected_city), None)
     if city_info and city_info.get("produced"):
         prod_df = pd.DataFrame(city_info["produced"])
@@ -177,6 +197,11 @@ def display_city_production(cities_data, turn_range, selected_city):
             (prod_df["turn"] <= turn_range[1])
         ]
         st.subheader(f"{selected_city} - Production History")
+        else:
+            st.info("No production data for this city.")
+            return
+
+    if not prod_df.empty:
         prod_count = prod_df["productName"].value_counts().head(50)
         prod_count_df = prod_count.reset_index()
         prod_count_df.columns = ["Product", "Count"]
@@ -184,6 +209,8 @@ def display_city_production(cities_data, turn_range, selected_city):
         fig = px.bar(prod_count_df, x="Product", y="Count", title="Production Count (Top 50)", 
                      category_orders={"Product": prod_count_df["Product"].tolist()})
         st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("No production data available for the selected city/cities.")
                 
 def display_city_orders(cities_data, turn_range, selected_city):
     city_info = next((c for c in cities_data if c["name"] == selected_city), None)
