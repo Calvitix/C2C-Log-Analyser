@@ -15,6 +15,7 @@ from views.rankings import display_rankings
 from views.score import display_score_analysis
 from views.military import display_military_analysis
 from views.units import display_unit_evaluation
+from graph_config import GRAPH_CONFIG
 
 def main():
     st.set_page_config(
@@ -152,12 +153,14 @@ def main():
 
     tabs = st.tabs([
         "📊 Overview", "👥 Players Analysis", "🏛️ Cities Analysis", 
-        "⚔️&🛠️ Units",  "🧮 Unit Evaluation", "🎯 Score Analysis",
+        "⚔️&🛠️ Units", "🎯 Score Analysis",
         "🏆 Rankings", "⏱️ Turn Timings", "📈 Comparative Analysis" 
     ])
 
     with tabs[0]:
         display_overview(filtered_df_player_stats, df_city_history, players_raw, cities_raw, data_directory)
+        # Add other graph calls here according to the checkboxes
+
     with tabs[1]:
         display_players_current_stats(players_raw, selected_player_ids)
         display_players_history(filtered_df_player_stats, selected_player_ids, turn_range)
@@ -170,17 +173,27 @@ def main():
         if selected_player_id is not None:
             display_city_analysis(cities_raw, turn_range, selected_player_id)        
     with tabs[3]:
-        display_military_analysis(filtered_df_player_stats, selected_player_ids, turn_range, players_raw)
+        with st.expander("Show/Hide Graph Options", expanded=False):
+            show_units_analysis = st.checkbox(
+                "Show military units analysis",
+                value=GRAPH_CONFIG["units"]["show_units_analysis"]
+            )
+            show_unit_evaluation = st.checkbox(
+                "Show unit evaluation analysis",
+                value=GRAPH_CONFIG["units"]["show_unit_evaluation"]
+            )
+        if show_units_analysis:
+            display_military_analysis(filtered_df_player_stats, selected_player_ids, turn_range, players_raw)  # Remplacez par le bon DataFrame si besoin
+        if show_unit_evaluation:
+            display_unit_evaluation(players_raw, selected_player_ids, turn_range)
     with tabs[4]:
-        display_unit_evaluation(players_raw, selected_player_ids, turn_range)
-    with tabs[5]:
         display_score_analysis(filtered_df_player_stats, selected_player_ids, turn_range)
-    with tabs[6]:
+    with tabs[5]:
         display_rankings(filtered_df_player_stats)
-    with tabs[7]:
+    with tabs[6]:
         df_timings = pd.DataFrame(timings_raw)
         display_turn_timings(df_timings, selected_player_ids, turn_range)
-    with tabs[8]:
+    with tabs[7]:
         display_comparative_analysis(filtered_df_player_stats, selected_player_ids, turn_range)
 
 if __name__ == "__main__":

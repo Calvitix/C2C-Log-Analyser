@@ -4,6 +4,8 @@ import plotly.express as px
 from plotly.subplots import make_subplots
 import numpy as np
 import plotly.graph_objects as go
+from graph_config import GRAPH_CONFIG
+from graph_config import UNITAI_COLORS
 
 
 def display_city_analysis(cities_data, turn_range, selected_player_id=None):
@@ -14,7 +16,7 @@ def display_city_analysis(cities_data, turn_range, selected_player_id=None):
         turn_range (tuple): (start_turn, end_turn)
         selected_player_id (int, optional): ID of the selected player.
     """
-    # Conversion DataFrame -> liste de dicts si besoin
+    # DataFrame to list of dicts if needed
     if isinstance(cities_data, pd.DataFrame):
         if cities_data.empty:
             st.info("No city data available.")
@@ -24,11 +26,10 @@ def display_city_analysis(cities_data, turn_range, selected_player_id=None):
         st.info("No city data available.")
         return
 
-    # Filtrer par joueur si demandé
+    # Filter by player if needed
     if selected_player_id is not None:
         cities_data = [city for city in cities_data if city.get("ownerId") == selected_player_id]
 
-    # Ne pas filtrer par foundedTurn, garder toutes les villes du joueur
     filtered_cities = [
         city for city in cities_data
         if isinstance(city, dict)
@@ -38,23 +39,39 @@ def display_city_analysis(cities_data, turn_range, selected_player_id=None):
         st.info("No cities found for the selected player.")
         return
 
-    # Passe la ville sélectionnée à chaque vue
-    display_city_overview(filtered_cities, None)
+    # --- Expander for checkboxes ---
+    with st.expander("Show/Hide Graph Options", expanded=False):
+        show_city_overview = st.checkbox(
+            "Show cities overview",
+            value=GRAPH_CONFIG["cities"]["show_city_overview"]
+        )
+        show_city_history = st.checkbox(
+            "Show city history",
+            value=GRAPH_CONFIG["cities"]["show_city_history"]
+        )
+        show_city_production = st.checkbox(
+            "Show city production",
+            value=GRAPH_CONFIG["cities"]["show_city_production"]
+        )
+        show_city_orders = st.checkbox(
+            "Show AI orders",
+            value=GRAPH_CONFIG["cities"]["show_city_orders"]
+        )
 
-    # Sélection unique de la ville, avec option "All"
+    # City selection
     city_names = [city["name"] for city in filtered_cities]
     city_names_with_all = ["All"] + city_names
     selected_city = st.selectbox("Select a city", city_names_with_all)
 
-    if selected_city == "All":
-        # Vue production pour toutes les villes (somme)
-        display_city_history(filtered_cities, turn_range, None)
-        display_city_production(filtered_cities, turn_range, "All")
-        display_city_orders(filtered_cities, turn_range, None)
-    else:
-    display_city_history(filtered_cities, turn_range, selected_city)
-    display_city_production(filtered_cities, turn_range, selected_city)
-    display_city_orders(filtered_cities, turn_range, selected_city)
+    # Conditional display
+    if show_city_overview:
+        display_city_overview(filtered_cities, None if selected_city == "All" else selected_city)
+    if show_city_history:
+        display_city_history(filtered_cities, turn_range, None if selected_city == "All" else selected_city)
+    if show_city_production:
+        display_city_production(filtered_cities, turn_range, selected_city)
+    if show_city_orders and selected_city != "All":
+        display_city_orders(filtered_cities, turn_range, selected_city)
 
 
 def display_city_overview(cities_data, selected_city):
@@ -113,13 +130,13 @@ def display_city_history(cities_data, turn_range, selected_city):
             line=dict(color="red")
         ))
 
-        # Other metrics (primary axis)
+        # Other metrics (primary axis) - FoodSurplus retiré, Education ajouté
         metrics_colors = {
             "production": "blue",
             "science": "cyan",
             "culture": "purple",
             "income": "orange",
-            "foodSurplus": "green"
+            "education": "purple"  # Ajouté ici
         }
         for metric, color in metrics_colors.items():
             if metric in history_df.columns:
@@ -134,7 +151,7 @@ def display_city_history(cities_data, turn_range, selected_city):
             title="City History Metrics",
             xaxis_title="Turn",
             yaxis=dict(
-                title="Production / Science / Culture / Income / Food Surplus",
+                title="Production / Science / Culture / Income / Education",
                 side="left"
             ),
             yaxis2=dict(
@@ -147,13 +164,36 @@ def display_city_history(cities_data, turn_range, selected_city):
 
         st.plotly_chart(fig, use_container_width=True)
 
-        # Second graph: city negative/positive metrics
+        # Nouveau graphique : FoodSurplus, foodTradeYield, netHappiness, netHealth
+        metrics_food_colors = {
+            "foodSurplus": "green",
+            "foodTradeYield": "olive",
+            "netHappiness": "magenta",
+            "netHealth": "teal"
+        }
+        fig_food = go.Figure()
+        for metric, color in metrics_food_colors.items():
+            if metric in history_df.columns:
+                fig_food.add_trace(go.Scatter(
+                    x=history_df["turn"],
+                    y=history_df[metric],
+                    name=metric,
+                    line=dict(color=color)
+                ))
+        fig_food.update_layout(
+            title="Food, Happiness & Health Metrics",
+            xaxis_title="Turn",
+            yaxis_title="Value",
+            legend=dict(x=0, y=1)
+        )
+        st.plotly_chart(fig_food, use_container_width=True)
+
+        # Second graph: city negative/positive metrics (sans education)
         metrics2_colors = {
             "criminalite": "black",
             "maladie": "darkgreen",
             "pollutionEau": "blue",
             "pollutionAir": "cyan",
-            "education": "purple",
             "risqueIncendie": "red",
             "tourisme": "orange"
         }
@@ -174,8 +214,36 @@ def display_city_history(cities_data, turn_range, selected_city):
         )
         st.plotly_chart(fig2, use_container_width=True)
 
+        # Nouveau graphique : changements S&E
+        metrics_change_colors = {
+            "criminaliteChange": "black",
+            "maladieChange": "darkgreen",
+            "pollutionEauChange": "blue",
+            "pollutionAirChange": "cyan",
+            "educationChange": "purple",
+            "risqueIncendieChange": "red",
+            "tourismeChange": "orange"
+        }
+        fig_change = go.Figure()
+        for metric, color in metrics_change_colors.items():
+            if metric in history_df.columns:
+                fig_change.add_trace(go.Scatter(
+                    x=history_df["turn"],
+                    y=history_df[metric],
+                    name=metric,
+                    line=dict(color=color)
+                ))
+        fig_change.update_layout(
+            title="S&E Metrics Change",
+            xaxis_title="Turn",
+            yaxis_title="Change Value",
+            legend=dict(x=0, y=1)
+        )
+        st.plotly_chart(fig_change, use_container_width=True)
+
 
 def display_city_production(cities_data, turn_range, selected_city):
+
     if selected_city == "All":
         # Agréger la production de toutes les villes
         all_prod = []
@@ -189,29 +257,77 @@ def display_city_production(cities_data, turn_range, selected_city):
         ]
         st.subheader("All Cities - Production History")
     else:
-    city_info = next((c for c in cities_data if c["name"] == selected_city), None)
-    if city_info and city_info.get("produced"):
-        prod_df = pd.DataFrame(city_info["produced"])
-        prod_df = prod_df[
-            (prod_df["turn"] >= turn_range[0]) &
-            (prod_df["turn"] <= turn_range[1])
-        ]
-        st.subheader(f"{selected_city} - Production History")
+        city_info = next((c for c in cities_data if c["name"] == selected_city), None)
+        if city_info and city_info.get("produced"):
+            prod_df = pd.DataFrame(city_info["produced"])
+            prod_df = prod_df[
+                (prod_df["turn"] >= turn_range[0]) &
+                (prod_df["turn"] <= turn_range[1])
+            ]
+            st.subheader(f"{selected_city} - Production History")
         else:
             st.info("No production data for this city.")
             return
+    # UNITAI type count
+    if not prod_df.empty:
+        # Extract UNITAI type from productName
+        def extract_unitai(text):
+            if isinstance(text, str) and "UNITAI" in text and "for type " in text:
+                after = text.split("for type ", 1)[-1]
+                # Optionally, remove trailing info (e.g. parentheses, commas)
+                return after.split()[0]
+            return None
+
+        prod_df["UNITAI_Type"] = prod_df["productName"].apply(extract_unitai)
+        unitai_count = prod_df["UNITAI_Type"].value_counts()
+        unitai_count_df = unitai_count.reset_index()
+        unitai_count_df.columns = ["UNITAI Type", "Count"]
+        unitai_count_df = unitai_count_df[unitai_count_df["UNITAI Type"].notnull()]
+
+        if not unitai_count_df.empty:
+            fig_unitai = px.bar(
+                unitai_count_df,
+                x="UNITAI Type",
+                y="Count",
+                title="Production Count by UNITAI Type",
+                category_orders={"UNITAI Type": unitai_count_df["UNITAI Type"].tolist()},
+                color="UNITAI Type",
+                color_discrete_map=UNITAI_COLORS
+            )
+            st.plotly_chart(fig_unitai, use_container_width=True)
+        else:
+            st.info("No UNITAI type found in production data.")
 
     if not prod_df.empty:
+        # Map each product to its UNITAI type
+        prod_df["UNITAI_Type"] = prod_df["productName"].apply(extract_unitai)
         prod_count = prod_df["productName"].value_counts().head(50)
         prod_count_df = prod_count.reset_index()
         prod_count_df.columns = ["Product", "Count"]
         prod_count_df = prod_count_df.sort_values("Count", ascending=False)
-        fig = px.bar(prod_count_df, x="Product", y="Count", title="Production Count (Top 50)", 
-                     category_orders={"Product": prod_count_df["Product"].tolist()})
+        # Merge UNITAI type for each product
+        prod_unitai_map = prod_df.drop_duplicates(subset=["productName"])[["productName", "UNITAI_Type"]]
+        prod_count_df = prod_count_df.merge(prod_unitai_map, left_on="Product", right_on="productName", how="left")
+        # Replace missing UNITAI types by "UNKNOWN"
+        prod_count_df["UNITAI_Type"] = prod_count_df["UNITAI_Type"].fillna("UNKNOWN")
+        fig = px.bar(
+            prod_count_df,
+            x="Product",
+            y="Count",
+            color="UNITAI_Type",
+            title="Production Count (Top 50)",
+            category_orders={"Product": prod_count_df["Product"].tolist()},
+            color_discrete_map=UNITAI_COLORS
+        )
         st.plotly_chart(fig, use_container_width=True)
     else:
         st.info("No production data available for the selected city/cities.")
-                
+
+
+
+
+
+
 def display_city_orders(cities_data, turn_range, selected_city):
     city_info = next((c for c in cities_data if c["name"] == selected_city), None)
     if city_info and city_info.get("ordersToCentral"):
