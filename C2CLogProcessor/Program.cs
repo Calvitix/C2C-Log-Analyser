@@ -4,6 +4,7 @@ using C2CLogProcessor.Parsers;
 using C2CLogProcessor.Parsers.Categorizers;
 using C2CLogProcessor.Services;
 using C2CLogProcessor.Services.Interfaces;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
@@ -70,11 +71,30 @@ namespace C2CLogProcessor
             _exporter = exporter;
         }
 
+        public static int CityHistoryInterval { get; private set; } = 1;
+        public static int PlayerHistoryInterval { get; private set; } = 1;
+
+        public static void LoadHistoryIntervalsFromConfig()
+        {
+            var configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "appsettings.json");
+            if (!File.Exists(configPath))
+            {
+                var defaultConfig = "{\n  \"CityHistoryInterval\": 1,\n  \"PlayerHistoryInterval\": 1\n}\n";
+                File.WriteAllText(configPath, defaultConfig);
+            }
+            var config = new ConfigurationBuilder()
+                .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
+                .AddJsonFile("appsettings.json", optional: true)
+                .Build();
+            CityHistoryInterval = int.TryParse(config["CityHistoryInterval"], out var cityVal) ? cityVal : 1;
+            PlayerHistoryInterval = int.TryParse(config["PlayerHistoryInterval"], out var playerVal) ? playerVal : 1;
+        }
+
         public void Run(string[] args)
         {
             string exeDir = AppDomain.CurrentDomain.BaseDirectory.TrimEnd('\\');
             string lastDir = exeDir.Split(Path.DirectorySeparatorChar).Last().ToLowerInvariant();
-
+            LoadHistoryIntervalsFromConfig();
             string inputFile;
             if (args.Length > 0 && !string.IsNullOrWhiteSpace(args[0]))
             {
@@ -176,6 +196,11 @@ namespace C2CLogProcessor
                 System.IO.Directory.CreateDirectory(jsonOutputDir);
             }
 
+            //Clean the Datas, by keeping only one every CityHistoryInterval in the City.History
+            CleanCityHistory(result.Cities?.ToList() ?? new List<City>(), CityHistoryInterval);
+
+            //The same for the Player.TurnHistory, UnitInventory, UnitEvalusation and Score History and , keep only one every PlayerHistoryInterval
+            CleanPlayerHistory(result.Players?.ToList() ?? new List<Player>(), PlayerHistoryInterval);
 
 
             jsonExporter.ExportAll(
@@ -187,6 +212,55 @@ namespace C2CLogProcessor
                 jsonOutputDir
             );
             Console.WriteLine($"All JSON exports written to: {jsonOutputDir}");
+        }
+
+        // Utility methods for cleaning history
+        public static void CleanCityHistory(List<City> cities, int interval)
+        {
+            foreach (var city in cities)
+            {
+                if (city.History != null && city.History.Count > 0 && interval > 1)
+                {
+                    city.History = city.History
+                        .Where(h => h.Turn % interval == 0)
+                        .ToList();
+                }
+            }
+        }
+
+        public static void CleanPlayerHistory(IEnumerable<Player> players, int interval)
+        {
+            foreach (var player in players)
+            {
+                // StatsHistory
+                if (player.StatsHistory != null && player.StatsHistory.Count > 0 && interval > 1)
+                {
+                    player.StatsHistory = player.StatsHistory
+                        .Where(h => h.Turn % interval == 0)
+                        .ToList();
+                }
+                // ScoreHistory
+                if (player.ScoreHistory != null && player.ScoreHistory.Count > 0 && interval > 1)
+                {
+                    player.ScoreHistory = player.ScoreHistory
+                        .Where(h => h.Turn % interval == 0)
+                        .ToList();
+                }
+                // UnitInventories
+                if (player.UnitInventories != null && player.UnitInventories.Count > 0 && interval > 1)
+                {
+                    player.UnitInventories = player.UnitInventories
+                        .Where(h => h.Turn % interval == 0)
+                        .ToList();
+                }
+                // UnitEvaluation
+                if (player.UnitEvaluation != null && player.UnitEvaluation.Evaluations.Count > 0 && interval > 1)
+                {
+                    player.UnitEvaluation.Evaluations = player.UnitEvaluation.Evaluations
+                        .Where(h => h.Turn % interval == 0)
+                        .ToList();
+                }
+            }
         }
     }
 }

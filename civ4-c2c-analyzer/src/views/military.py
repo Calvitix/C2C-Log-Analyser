@@ -53,8 +53,8 @@ def display_military_analysis(df_player_stats, selected_players, turn_range, pla
             for inventory in player['unitInventories']:
                 for unit_key, unit_data in inventory['unitsByType'].items():
                     unit_entry = {
-                        'playerId': inventory['playerId'],
-                        'playerName': player['name'],  # <-- add this line
+                        'playerId': inventory['playerId'],  # <-- corriger ici
+                        'playerName': player['name'],
                         'turn': inventory['turn'],
                         'unitType': unit_data['unitType'],
                         'unitAIType': unit_data['unitAIType'],
@@ -66,18 +66,20 @@ def display_military_analysis(df_player_stats, selected_players, turn_range, pla
 
     # For the detailed selectbox, rebuild the "ID - Name" list
     player_options = [
-        f"{row['player_id']} - {row['playerName']}"
-        for _, row in df_player_stats[['player_id', 'playerName']].drop_duplicates().sort_values('player_id').iterrows()
-        if row['player_id'] in selected_players
+        f"{row['playerId']} - {row['playerName']}"
+        for _, row in df_player_stats[['playerId', 'playerName']].drop_duplicates().sort_values('playerId').iterrows()
+        if row['playerId'] in selected_players
     ]
 
     if not player_options:
         st.info("No player selected for detailed analysis.")
         return
 
-
-
     df_units_compar = pd.DataFrame(all_units)
+
+    if df_units_compar.empty:
+        st.warning("No Units data found for selected players and period.")
+        return
 
     # Apply filters
     df_units_compar_filtered = df_units_compar[
@@ -124,8 +126,8 @@ def display_military_analysis(df_player_stats, selected_players, turn_range, pla
         st.info("Please select a player for detailed analysis.")
         return    
 
-    player_id = int(selected_player_str.split(" - ")[0])
-    player_info = df_player_stats[df_player_stats['player_id'] == player_id]    
+    playerId = int(selected_player_str.split(" - ")[0])
+    player_info = df_player_stats[df_player_stats['playerId'] == playerId]    
 
 
     if all_units:
@@ -133,7 +135,7 @@ def display_military_analysis(df_player_stats, selected_players, turn_range, pla
 
         # Apply filters
         df_units_filtered = df_units[
-            (df_units['playerId'] == player_id) &
+            (df_units['playerId'] == playerId) &
             (df_units['turn'] >= turn_range[0]) &
             (df_units['turn'] <= turn_range[1])
         ]
@@ -268,18 +270,22 @@ def display_military_analysis(df_player_stats, selected_players, turn_range, pla
                     col1, col2 = st.columns(2)
                     with col1:
                         # --- UnitAI distribution at turn ---
-                        unitai_distribution = turn_units.groupby('unitAIType')['count'].sum().sort_values(ascending=False)
+                        unitai_distribution = turn_units.groupby('unitAIType')['count'].sum().sort_values(ascending=False).head(15)
                         unitai_distribution = unitai_distribution.reset_index()
                         unitai_distribution['color'] = unitai_distribution['unitAIType'].apply(
                             lambda x: UNITAI_COLORS.get(x, UNITAI_COLORS.get("UNKNOWN", "#bdc3c7"))
                         )
                         # Remplacer les valeurs manquantes par "UNKNOWN"
                         unitai_distribution['unitAIType'] = unitai_distribution['unitAIType'].fillna("UNKNOWN")
+                        
+                        # Ajout : calculer le total des unités pour le pie chart UnitAI
+                        total_units = unitai_distribution['count'].sum()
+                        
                         fig_unitai = px.pie(
                             unitai_distribution,
                             values='count',
                             names='unitAIType',
-                            title=f"UnitAI Distribution at Turn {analysis_turn}",
+                            title=f"UnitAI Distribution at Turn {analysis_turn} (Total units: {total_units})",
                             color='unitAIType',
                             color_discrete_map=UNITAI_COLORS
                         )
@@ -287,11 +293,12 @@ def display_military_analysis(df_player_stats, selected_players, turn_range, pla
                         
                     with col2:
                         # Unit distribution at turn
-                        unit_distribution = turn_units.groupby('unitType')['count'].sum().sort_values(ascending=False).head(10)
+                        unit_distribution = turn_units.groupby('unitType')['count'].sum().sort_values(ascending=False).head(15)
+                        total_units = unit_distribution.sum()
                         fig_pie = px.pie(
                             values=unit_distribution.values,
                             names=unit_distribution.index,
-                            title=f"Unit Distribution at Turn {analysis_turn}"
+                            title=f"Top 15 Unit Distribution at Turn {analysis_turn} (Total units: {total_units})"
                         )
                         st.plotly_chart(fig_pie, use_container_width=True)
 
@@ -340,13 +347,35 @@ def display_military_analysis(df_player_stats, selected_players, turn_range, pla
                 )
                 st.plotly_chart(fig_ai_unit, use_container_width=True)
 
+                st.subheader("⚔️ Military Repartition by Unit Type (colored by UnitAI)")
+                unit_type_ai_count = (
+                    turn_units.groupby(['unitType', 'unitAIType'])['count'].sum().reset_index()
+                )
+                # Trier les types d'unités par total décroissant
+                unit_type_order = (
+                    unit_type_ai_count.groupby('unitType')['count'].sum()
+                    .sort_values(ascending=False)
+                    .index.tolist()
+                )
+                fig_type_ai = px.bar(
+                    unit_type_ai_count,
+                    x="unitType",
+                    y="count",
+                    color="unitAIType",
+                    title=f"Military Repartition by Unit Type at Turn {analysis_turn} (colored by UnitAI)",
+                    category_orders={"unitType": unit_type_order},
+                    color_discrete_map=UNITAI_COLORS
+                )
+                st.plotly_chart(fig_type_ai, use_container_width=True)
+
+
 
             if show_civil_units_repartition_by_ai_type:
                 st.subheader("🛠️ Civil Units Repartition by AI Type (colored by Unit Type)")
                 # Get civil units directly from all_units, reapplying filters for turn and player
                 df_all_units = pd.DataFrame(all_units)
                 civil_turn_units = df_all_units[
-                    (df_all_units['playerId'] == player_id) &
+                    (df_all_units['playerId'] == playerId) &
                     (df_all_units['turn'] == analysis_turn) &
                     (df_all_units['unitAIType'].isin(civil_ai_types))
                 ]

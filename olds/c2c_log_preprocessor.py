@@ -1,7 +1,7 @@
 """
 Civ4 C2C Log Preprocessor - Enhanced Version
 Transforms raw log lines into structured format:
-[turn_number|player_id|category] original_line_without_timestamp
+[turn_number|playerId|category] original_line_without_timestamp
 """
 
 import re
@@ -25,7 +25,7 @@ class LogPreprocessor:
     def __init__(self):
         # State tracking - persistent across lines
         self.current_turn = 0  # Start at 0, not -1
-        self.active_player_id = -1  # -1 means no player active yet
+        self.active_playerId = -1  # -1 means no player active yet
         self.active_player_name = ""
         
         # Patterns for line categorization
@@ -255,7 +255,7 @@ class LogPreprocessor:
         """Check if line indicates a turn change and update state"""
         match = self.patterns['turn_change'].search(line)
         if match:
-            self.active_player_id = int(match.group(1))
+            self.active_playerId = int(match.group(1))
             self.active_player_name = match.group(2)
             self.current_turn = int(match.group(3))
             return True
@@ -265,7 +265,7 @@ class LogPreprocessor:
         """Check if line indicates a change of player and update state"""
         match = self.patterns['player_change'].search(line)
         if match:
-            self.active_player_id = int(match.group(1))
+            self.active_playerId = int(match.group(1))
             self.active_player_name = match.group(2)
             //self.current_turn = int(match.group(3))
             return True
@@ -287,9 +287,9 @@ class LogPreprocessor:
         # Categorize the line
         category = self.categorize_line(cleaned_line)
         
-        # Format output: [turn|player_id|category] content
+        # Format output: [turn|playerId|category] content
         # Using current state (which persists from previous lines if not updated)
-        formatted_line = f"[{self.current_turn}|{self.active_player_id}|{category.value}] {cleaned_line}"
+        formatted_line = f"[{self.current_turn}|{self.active_playerId}|{category.value}] {cleaned_line}"
         
         return formatted_line
     
@@ -336,7 +336,7 @@ class LogPreprocessor:
             'total_lines': line_count,
             'category_counts': category_counts,
             'turns_found': self.current_turn + 1,
-            'last_active_player': f"{self.active_player_name} (ID: {self.active_player_id})" if self.active_player_id != -1 else "None"
+            'last_active_player': f"{self.active_player_name} (ID: {self.active_playerId})" if self.active_playerId != -1 else "None"
         }
     
     def process_file_to_dataframe(self, input_file: str, encoding: str = 'windows-1252') -> 'pd.DataFrame':
@@ -356,7 +356,7 @@ class LogPreprocessor:
                             data.append({
                                 'line_number': line_num,
                                 'turn': int(match.group(1)),
-                                'player_id': int(match.group(2)),
+                                'playerId': int(match.group(2)),
                                 'category': match.group(3),
                                 'content': match.group(4)
                             })

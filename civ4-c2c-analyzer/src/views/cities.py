@@ -8,13 +8,13 @@ from graph_config import GRAPH_CONFIG
 from graph_config import UNITAI_COLORS
 
 
-def display_city_analysis(cities_data, turn_range, selected_player_id=None):
+def display_city_analysis(cities_data, turn_range, selected_playerId=None):
     """
     Display analysis for cities belonging to the selected player.
     Args:
         cities_data (list or pd.DataFrame): List of city data dictionaries or DataFrame.
         turn_range (tuple): (start_turn, end_turn)
-        selected_player_id (int, optional): ID of the selected player.
+        selected_playerId (int, optional): ID of the selected player.
     """
     # DataFrame to list of dicts if needed
     if isinstance(cities_data, pd.DataFrame):
@@ -27,8 +27,8 @@ def display_city_analysis(cities_data, turn_range, selected_player_id=None):
         return
 
     # Filter by player if needed
-    if selected_player_id is not None:
-        cities_data = [city for city in cities_data if city.get("ownerId") == selected_player_id]
+    if selected_playerId is not None:
+        cities_data = [city for city in cities_data if city.get("ownerId") == selected_playerId]
 
     filtered_cities = [
         city for city in cities_data
@@ -109,6 +109,187 @@ def display_city_overview(cities_data, selected_city):
 
 
 def display_city_history(cities_data, turn_range, selected_city):
+    if selected_city is None:
+        # Concaténer tous les historiques
+        all_histories = []
+        for city in cities_data:
+            if city.get("history"):
+                df = pd.DataFrame(city["history"])
+                df = df[(df["turn"] >= turn_range[0]) & (df["turn"] <= turn_range[1])]
+                all_histories.append(df)
+        if not all_histories:
+            st.info("Aucune donnée d'historique disponible.")
+            return
+        history_df = pd.concat(all_histories)
+        numeric_cols = history_df.select_dtypes(include=np.number).columns
+        grouped = history_df.groupby("turn")[numeric_cols].agg(['mean', 'std'])
+        st.subheader("Toutes les villes - Moyenne et Écart-type des métriques")
+
+        # --- Food, Happiness, Health ---
+        metrics_food_colors = {
+            "foodSurplus": "green",
+            "foodTradeYield": "olive",
+            "netHappiness": "magenta",
+            "netHealth": "teal"
+        }
+        fig_food = go.Figure()
+        for metric, color in metrics_food_colors.items():
+            if metric in grouped.columns.get_level_values(0):
+                # Moyenne (axe gauche)
+                fig_food.add_trace(go.Scatter(
+                    x=grouped.index,
+                    y=grouped[(metric, 'mean')],
+                    name=f"{metric} (moyenne)",
+                    line=dict(color=color)
+                ))
+                # Écart-type (axe droite)
+                fig_food.add_trace(go.Scatter(
+                    x=grouped.index,
+                    y=grouped[(metric, 'std')],
+                    name=f"{metric} (écart-type)",
+                    line=dict(color=color, dash='dot'),
+                    yaxis="y2"
+                ))
+        fig_food.update_layout(
+            title="Food, Happiness & Health Metrics (Moyenne & Écart-type)",
+            xaxis_title="Turn",
+            yaxis=dict(
+                title="Moyenne",
+                side="left"
+            ),
+            yaxis2=dict(
+                title="Écart-type",
+                overlaying="y",
+                side="right"
+            ),
+            legend=dict(x=0, y=1)
+        )
+        st.plotly_chart(fig_food, use_container_width=True)
+
+        # --- Production, Science, Culture, Income, Education ---
+        metrics_colors = {
+            "production": "blue",
+            "science": "cyan",
+            "culture": "purple",
+            "income": "orange",
+            "education": "purple"
+        }
+        fig_metrics = go.Figure()
+        for metric, color in metrics_colors.items():
+            if metric in grouped.columns.get_level_values(0):
+                fig_metrics.add_trace(go.Scatter(
+                    x=grouped.index,
+                    y=grouped[(metric, 'mean')],
+                    name=f"{metric} (moyenne)",
+                    line=dict(color=color)
+                ))
+                fig_metrics.add_trace(go.Scatter(
+                    x=grouped.index,
+                    y=grouped[(metric, 'std')],
+                    name=f"{metric} (écart-type)",
+                    line=dict(color=color, dash='dot'),
+                    yaxis="y2"
+                ))
+        fig_metrics.update_layout(
+            title="Production, Science, Culture, Income, Education (Moyenne & Écart-type)",
+            xaxis_title="Turn",
+            yaxis=dict(
+                title="Moyenne",
+                side="left"
+            ),
+            yaxis2=dict(
+                title="Écart-type",
+                overlaying="y",
+                side="right"
+            ),
+            legend=dict(x=0, y=1)
+        )
+        st.plotly_chart(fig_metrics, use_container_width=True)
+
+        # --- Social & Environmental Metrics ---
+        metrics2_colors = {
+            "criminalite": "black",
+            "maladie": "darkgreen",
+            "pollutionEau": "blue",
+            "pollutionAir": "cyan",
+            "risqueIncendie": "red",
+            "tourisme": "orange"
+        }
+        fig2 = go.Figure()
+        for metric, color in metrics2_colors.items():
+            if metric in grouped.columns.get_level_values(0):
+                fig2.add_trace(go.Scatter(
+                    x=grouped.index,
+                    y=grouped[(metric, 'mean')],
+                    name=f"{metric} (moyenne)",
+                    line=dict(color=color)
+                ))
+                fig2.add_trace(go.Scatter(
+                    x=grouped.index,
+                    y=grouped[(metric, 'std')],
+                    name=f"{metric} (écart-type)",
+                    line=dict(color=color, dash='dot'),
+                    yaxis="y2"
+                ))
+        fig2.update_layout(
+            title="City Social & Environmental Metrics (Moyenne & Écart-type)",
+            xaxis_title="Turn",
+            yaxis=dict(
+                title="Moyenne",
+                side="left"
+            ),
+            yaxis2=dict(
+                title="Écart-type",
+                overlaying="y",
+                side="right"
+            ),
+            legend=dict(x=0, y=1)
+        )
+        st.plotly_chart(fig2, use_container_width=True)
+
+        # --- S&E Metrics Change ---
+        metrics_change_colors = {
+            "criminaliteChange": "black",
+            "maladieChange": "darkgreen",
+            "pollutionEauChange": "blue",
+            "pollutionAirChange": "cyan",
+            "educationChange": "purple",
+            "risqueIncendieChange": "red",
+            "tourismeChange": "orange"
+        }
+        fig_change = go.Figure()
+        for metric, color in metrics_change_colors.items():
+            if metric in grouped.columns.get_level_values(0):
+                fig_change.add_trace(go.Scatter(
+                    x=grouped.index,
+                    y=grouped[(metric, 'mean')],
+                    name=f"{metric} (moyenne)",
+                    line=dict(color=color)
+                ))
+                fig_change.add_trace(go.Scatter(
+                    x=grouped.index,
+                    y=grouped[(metric, 'std')],
+                    name=f"{metric} (écart-type)",
+                    line=dict(color=color, dash='dot'),
+                    yaxis="y2"
+                ))
+        fig_change.update_layout(
+            title="S&E Metrics Change (Moyenne & Écart-type)",
+            xaxis_title="Turn",
+            yaxis=dict(
+                title="Moyenne",
+                side="left"
+            ),
+            yaxis2=dict(
+                title="Écart-type",
+                overlaying="y",
+                side="right"
+            ),
+            legend=dict(x=0, y=1)
+        )
+        st.plotly_chart(fig_change, use_container_width=True)
+        return
+
     city_info = next((c for c in cities_data if c["name"] == selected_city), None)
     if city_info and city_info.get("history"):
         history_df = pd.DataFrame(city_info["history"])

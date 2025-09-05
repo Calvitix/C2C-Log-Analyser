@@ -22,7 +22,7 @@ class TimestampTurnMapper:
     """Maps timestamps to turns using data from the main log"""
     
     def __init__(self):
-        # List of (timestamp, turn, player_id) tuples, sorted by timestamp
+        # List of (timestamp, turn, playerId) tuples, sorted by timestamp
         self.timestamp_mappings: List[Tuple[float, int, int]] = []
     
     def load_from_processed_file(self, processed_file_path: str, encoding: str = 'utf-8'):
@@ -35,7 +35,7 @@ class TimestampTurnMapper:
                 match = timestamp_pattern.match(line)
                 if match:
                     turn = int(match.group(1))
-                    player_id = int(match.group(2))
+                    playerId = int(match.group(2))
                     
                     # Try to find original timestamp in the line
                     # Look for patterns like "Player X setTurnActive for turn Y"
@@ -78,7 +78,7 @@ class TimestampTurnMapper:
         print(f"Loaded {len(self.timestamp_mappings)} timestamp-turn mappings")
     
     def get_turn_for_timestamp(self, timestamp: float) -> Tuple[int, int]:
-        """Get turn and player_id for a given timestamp"""
+        """Get turn and playerId for a given timestamp"""
         if not self.timestamp_mappings:
             return 0, -1
         
@@ -135,7 +135,7 @@ class EvalLogPreprocessor:
         
         # Extract player ID patterns
         self.player_patterns = {
-            'player_id': re.compile(r'(?:Player|AI Player)\s+(\d+)'),
+            'playerId': re.compile(r'(?:Player|AI Player)\s+(\d+)'),
             'city_owner': re.compile(r'City\s+([^,]+)'),  # We'll need to map cities to players
         }
         
@@ -162,10 +162,10 @@ class EvalLogPreprocessor:
         
         return EvalLogCategory.UNKNOWN
     
-    def extract_player_id(self, line: str) -> int:
+    def extract_playerId(self, line: str) -> int:
         """Extract player ID from line"""
         # Direct player mention
-        player_match = self.player_patterns['player_id'].search(line)
+        player_match = self.player_patterns['playerId'].search(line)
         if player_match:
             return int(player_match.group(1))
         
@@ -183,9 +183,9 @@ class EvalLogPreprocessor:
         founding_pattern = re.compile(r'Player\s+(\d+).*?City\s+([^,\s]+)')
         match = founding_pattern.search(line)
         if match:
-            player_id = int(match.group(1))
+            playerId = int(match.group(1))
             city_name = match.group(2).strip()
-            self.city_to_player[city_name] = player_id
+            self.city_to_player[city_name] = playerId
     
     def extract_timestamp(self, line: str) -> Tuple[Optional[float], str]:
         """Extract timestamp and return cleaned line"""
@@ -214,16 +214,16 @@ class EvalLogPreprocessor:
         self.update_city_mapping(cleaned_line)
         
         # Try to extract player ID from the line itself
-        line_player_id = self.extract_player_id(cleaned_line)
+        line_playerId = self.extract_playerId(cleaned_line)
         
         # Use line player ID if found, otherwise use active player
-        player_id = line_player_id if line_player_id != -1 else active_player
+        playerId = line_playerId if line_playerId != -1 else active_player
         
         # Categorize the line
         category = self.categorize_line(cleaned_line)
         
-        # Format output: [turn|player_id|category] content
-        formatted_line = f"[{turn}|{player_id}|{category.value}] {cleaned_line}"
+        # Format output: [turn|playerId|category] content
+        formatted_line = f"[{turn}|{playerId}|{category.value}] {cleaned_line}"
         
         return formatted_line
     

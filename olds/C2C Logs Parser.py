@@ -52,7 +52,7 @@ class TurnInfo:
     """Represents a turn in the game"""
     turn_number: int
     timestamp: float
-    active_player_id: int
+    active_playerId: int
     active_player_name: str
 
 
@@ -95,7 +95,7 @@ class CivicConfiguration:
 class PlayerStats:
     """Complete stats for a player at a specific turn"""
     turn: int
-    player_id: int
+    playerId: int
     player_name: str
     cities: int = 0
     population: int = 0
@@ -147,10 +147,10 @@ class City:
 class Player:
     """Represents a player/civilization in the game"""
     
-    def __init__(self, player_id: int, name: str):
-        self.id = player_id
+    def __init__(self, playerId: int, name: str):
+        self.id = playerId
         self.name = name
-        self.is_human = player_id < 40  # NPCs have ID >= 40
+        self.is_human = playerId < 40  # NPCs have ID >= 40
         
         # Cities owned
         self.cities: Dict[str, City] = {}
@@ -184,10 +184,10 @@ class Game:
         self.current_turn = 0
         self.all_cities: Dict[str, City] = {}
         
-    def add_player(self, player_id: int, name: str) -> Player:
-        if player_id not in self.players:
-            self.players[player_id] = Player(player_id, name)
-        return self.players[player_id]
+    def add_player(self, playerId: int, name: str) -> Player:
+        if playerId not in self.players:
+            self.players[playerId] = Player(playerId, name)
+        return self.players[playerId]
     
     def add_turn(self, turn_info: TurnInfo):
         self.turns.append(turn_info)
@@ -222,7 +222,7 @@ class TurnActivePattern(LogPattern):
         match = self.pattern.search(line)
         if match:
             return {
-                'player_id': int(match.group(1)),
+                'playerId': int(match.group(1)),
                 'player_name': match.group(2),
                 'turn': int(match.group(3))
             }
@@ -232,12 +232,12 @@ class TurnActivePattern(LogPattern):
         turn_info = TurnInfo(
             turn_number=match_data['turn'],
             timestamp=context.get('timestamp', 0.0),
-            active_player_id=match_data['player_id'],
+            active_playerId=match_data['playerId'],
             active_player_name=match_data['player_name']
         )
         game.add_turn(turn_info)
-        game.add_player(match_data['player_id'], match_data['player_name'])
-        context['active_player'] = match_data['player_id']
+        game.add_player(match_data['playerId'], match_data['player_name'])
+        context['active_player'] = match_data['playerId']
         context['current_turn'] = match_data['turn']
 
 
@@ -253,7 +253,7 @@ class PlayerStatsPattern(LogPattern):
         match = self.pattern.search(line)
         if match:
             return {
-                'player_id': int(match.group(1)),
+                'playerId': int(match.group(1)),
                 'player_name': match.group(2),
                 'cities': int(match.group(3)),
                 'population': int(match.group(4)),
@@ -263,11 +263,11 @@ class PlayerStatsPattern(LogPattern):
         return None
     
     def process(self, match_data: Dict, game: Game, context: Dict):
-        player = game.add_player(match_data['player_id'], match_data['player_name'])
+        player = game.add_player(match_data['playerId'], match_data['player_name'])
         
         stats = PlayerStats(
             turn=context.get('current_turn', 0),
-            player_id=match_data['player_id'],
+            playerId=match_data['playerId'],
             player_name=match_data['player_name'],
             cities=match_data['cities'],
             population=match_data['population'],
@@ -291,7 +291,7 @@ class CityFoundingPattern(LogPattern):
         match = self.pattern.search(line)
         if match:
             return {
-                'player_id': int(match.group(1)),
+                'playerId': int(match.group(1)),
                 'player_name': match.group(2),
                 'city_name': match.group(3),
                 'x': int(match.group(4)),
@@ -302,7 +302,7 @@ class CityFoundingPattern(LogPattern):
     def process(self, match_data: Dict, game: Game, context: Dict):
         city = City(
             name=match_data['city_name'],
-            owner_id=match_data['player_id'],
+            owner_id=match_data['playerId'],
             owner_name=match_data['player_name'],
             x=match_data['x'],
             y=match_data['y'],
@@ -359,7 +359,7 @@ class Civ4LogParser:
             turn_data.append({
                 'timestamp': turn.timestamp,
                 'turn': turn.turn_number,
-                'active_player_id': turn.active_player_id,
+                'active_playerId': turn.active_playerId,
                 'active_player_name': turn.active_player_name
             })
         df_timeline = pd.DataFrame(turn_data)
@@ -370,7 +370,7 @@ class Civ4LogParser:
             for stats in player.stats_history:
                 row = {
                     'turn': stats.turn,
-                    'player_id': stats.player_id,
+                    'playerId': stats.playerId,
                     'player_name': stats.player_name,
                     'cities': stats.cities,
                     'population': stats.population,

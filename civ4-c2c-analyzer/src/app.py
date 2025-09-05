@@ -117,12 +117,12 @@ def main():
 
 
     # Création de la liste des joueurs "ID - Nom", triée par ID croissant
-    if 'player_id' in df_player_stats.columns and 'playerName' in df_player_stats.columns:
+    if 'playerId' in df_player_stats.columns and 'playerName' in df_player_stats.columns:
         player_options = (
-            df_player_stats[['player_id', 'playerName']]
+            df_player_stats[['playerId', 'playerName']]
             .drop_duplicates()
-            .sort_values('player_id')
-            .apply(lambda row: f"{row['player_id']} - {row['playerName']}", axis=1)
+            .sort_values('playerId')
+            .apply(lambda row: f"{row['playerId']} - {row['playerName']}", axis=1)
             .tolist()
         )
     else:
@@ -140,7 +140,7 @@ def main():
     ]
 
     # Filtrer le DataFrame selon les IDs sélectionnés
-    filtered_df_player_stats = df_player_stats[df_player_stats['player_id'].isin(selected_player_ids)]
+    filtered_df_player_stats = df_player_stats[df_player_stats['playerId'].isin(selected_player_ids)]
 
     min_turn = int(filtered_df_player_stats['turn'].min()) if 'turn' in filtered_df_player_stats.columns and not filtered_df_player_stats.empty else 0
     max_turn = int(filtered_df_player_stats['turn'].max()) if 'turn' in filtered_df_player_stats.columns and not filtered_df_player_stats.empty else 0
@@ -165,13 +165,13 @@ def main():
         display_players_current_stats(players_raw, selected_player_ids)
         display_players_history(filtered_df_player_stats, selected_player_ids, turn_range)
     with tabs[2]:
-        selected_player_id = st.selectbox(
+        selected_playerId = st.selectbox(
             "Select a player for city analysis",
             options=selected_player_ids,
-            format_func=lambda x: f"{x} - {df_player_stats[df_player_stats['player_id'] == x]['playerName'].values[0]}"
+            format_func=lambda x: f"{x} - {df_player_stats[df_player_stats['playerId'] == x]['playerName'].values[0]}"
         )
-        if selected_player_id is not None:
-            display_city_analysis(cities_raw, turn_range, selected_player_id)        
+        if selected_playerId is not None:
+            display_city_analysis(cities_raw, turn_range, selected_playerId)        
     with tabs[3]:
         with st.expander("Show/Hide Graph Options", expanded=False):
             show_units_analysis = st.checkbox(

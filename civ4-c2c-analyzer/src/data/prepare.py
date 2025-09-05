@@ -8,7 +8,7 @@ def prepare_player_stats_df(players_data):
         if player['isHuman']:  # Focus sur les joueurs humains
             for stat in player['statsHistory']:
                 stat['playerName'] = player['name']
-                stat['player_id'] = player['id']  # <-- Ajout de l'ID
+                stat['playerId'] = player['id']  # <-- Ajout de l'ID
                 all_stats.append(stat)
     return pd.DataFrame(all_stats)
 

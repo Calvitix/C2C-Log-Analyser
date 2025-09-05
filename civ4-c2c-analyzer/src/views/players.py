@@ -17,25 +17,25 @@ def display_players_analysis(df_player_stats, selected_players, turn_range):
         st.info("No player data available.")
         return
 
-    for player_id in selected_players:
+    for playerId in selected_players:
         # Filter DataFrame by ID and turn range
         player_info = df_player_stats[
-            (df_player_stats['player_id'] == player_id) &
+            (df_player_stats['playerId'] == playerId) &
             (df_player_stats['turn'] >= turn_range[0]) &
             (df_player_stats['turn'] <= turn_range[1])
         ]
-        player_name = player_info['playerName'].iloc[0] if not player_info.empty else str(player_id)
+        player_name = player_info['playerName'].iloc[0] if not player_info.empty else str(playerId)
         if not player_info.empty:
             latest_score = player_info.sort_values('turn')['score'].iloc[-1] if 'score' in player_info.columns else None
-            st.metric(f"{player_id} - {player_name} - Latest Score", latest_score)
+            st.metric(f"{playerId} - {player_name} - Latest Score", latest_score)
         else:
-            st.info(f"No data for player {player_id}.")
+            st.info(f"No data for player {playerId}.")
 
     # For the detailed selectbox, rebuild the "ID - Name" list
     player_options = [
-        f"{row['player_id']} - {row['playerName']}"
-        for _, row in df_player_stats[['player_id', 'playerName']].drop_duplicates().sort_values('player_id').iterrows()
-        if row['player_id'] in selected_players
+        f"{row['playerId']} - {row['playerName']}"
+        for _, row in df_player_stats[['playerId', 'playerName']].drop_duplicates().sort_values('playerId').iterrows()
+        if row['playerId'] in selected_players
     ]
     
     if not player_options:
@@ -47,8 +47,8 @@ def display_players_analysis(df_player_stats, selected_players, turn_range):
         st.info("Please select a player for detailed analysis.")
         return
 
-    player_id = int(selected_player_str.split(" - ")[0])
-    player_info = df_player_stats[df_player_stats['player_id'] == player_id]    
+    playerId = int(selected_player_str.split(" - ")[0])
+    player_info = df_player_stats[df_player_stats['playerId'] == playerId]    
     
     if not player_info.empty:
         current_stats = player_info['currentStats']
@@ -101,11 +101,11 @@ def display_players_current_stats(players_raw, selected_player_ids):
     for player in players_raw:
         if player['id'] in selected_player_ids:
             player_name = player['name']
-            player_id = player['id']
+            playerId = player['id']
             current_stats = player.get('currentStats', {})
             col1, col2, col3, col4 = st.columns(4)
             with col1:
-                metric(f"{player_id} - {player_name} | Cities", current_stats.get('cities', 0))
+                metric(f"{playerId} - {player_name} | Cities", current_stats.get('cities', 0))
                 metric("Population", current_stats.get('population', 0))
             with col2:
                 metric("Military Power", current_stats.get('power', 0))
@@ -123,9 +123,9 @@ def display_players_history(df_player_stats, selected_player_ids, turn_range):
     """
     st.subheader("📈 Detailed Evolution")
     player_options = [
-        f"{row['player_id']} - {row['playerName']}"
-        for _, row in df_player_stats[['player_id', 'playerName']].drop_duplicates().sort_values('player_id').iterrows()
-        if row['player_id'] in selected_player_ids
+        f"{row['playerId']} - {row['playerName']}"
+        for _, row in df_player_stats[['playerId', 'playerName']].drop_duplicates().sort_values('playerId').iterrows()
+        if row['playerId'] in selected_player_ids
     ]
     
     if not player_options:
@@ -137,9 +137,9 @@ def display_players_history(df_player_stats, selected_player_ids, turn_range):
         st.info("Please select a player for detailed analysis.")
         return
 
-    player_id = int(selected_player_str.split(" - ")[0])
+    playerId = int(selected_player_str.split(" - ")[0])
     player_info = df_player_stats[
-        (df_player_stats['player_id'] == player_id) &
+        (df_player_stats['playerId'] == playerId) &
         (df_player_stats['turn'] >= turn_range[0]) &
         (df_player_stats['turn'] <= turn_range[1])
     ]
